@@ -6,16 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A hardware-free demo of a smart-home system for a school project, built as standalone HTML files with inline CSS/JS — no build system, no dependencies, no tests. The app simulates the home controller entirely in the browser. All UI text is Hebrew, and the document is RTL (`<html lang="he" dir="rtl">`).
 
-- `smart-home-app.html` — the current app. All work happens here.
+- `index.html` — the current app. All work happens here.
 - `smart-home-demo.html` — the first, superseded version (dark theme). Kept for comparison only; don't extend it.
+- `manifest.webmanifest`, `sw.js`, `icons/` — PWA layer so the app installs to an iPhone home screen ("Add to Home Screen" from Safari) and works offline. The service worker only registers over https/localhost, so local file:// development is unaffected. When changing cached assets, bump the `CACHE` version in `sw.js`.
 
 ## Running
 
-Open `smart-home-app.html` directly in a browser (double-click, or the Claude browser preview). No server needed. State lives in memory only — refreshing resets the demo to its initial state, which is intentional for presentations; do not add persistence unless asked.
+Open `index.html` directly in a browser (double-click, or the Claude browser preview). No server needed. State lives in memory only — refreshing resets the demo to its initial state, which is intentional for presentations; do not add persistence unless asked.
 
 The Heebo font loads from Google Fonts; offline it silently falls back to system fonts.
 
-## Architecture of smart-home-app.html
+## Architecture of index.html
 
 Single file: CSS in `<style>`, markup skeleton, then one `<script>` with clearly commented sections (ICONS, TYPES, STATE, HEADER, ROOM CHIPS, SCENE, DEVICE CARDS, ACTIONS, PRESETS, SCHEDULES, LOG & TOASTS, SHEETS, TABS, INIT).
 

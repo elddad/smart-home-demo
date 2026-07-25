@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הבית החכם — דמו</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#1a2233; --card2:#212c44; --text:#eef2fa; --muted:#8fa0bd;
+    --on:#3ddc84; --off:#5a6a8a; --accent:#4da3ff; --warn:#ffb347; --danger:#ff5d73;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',Arial,sans-serif;}
+  body{background:var(--bg); color:var(--text); min-height:100vh;}
+  .phone{max-width:430px; margin:0 auto; min-height:100vh; background:var(--bg); position:relative; padding-bottom:90px;}
+
+  header{padding:18px 20px 10px; display:flex; justify-content:space-between; align-items:center;}
+  header h1{font-size:20px;}
+  .clock{font-size:14px; color:var(--muted); text-align:left; line-height:1.3;}
+  .clock b{color:var(--text); font-size:17px; display:block;}
+
+  .conn{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--on); background:rgba(61,220,132,.1); padding:3px 10px; border-radius:20px; margin:0 20px 8px;}
+  .conn .dot{width:8px;height:8px;border-radius:50%;background:var(--on); animation:pulse 2s infinite;}
+  @keyframes pulse{50%{opacity:.4}}
+
+  .section{padding:8px 16px;}
+  .section h2{font-size:14px; color:var(--muted); margin:10px 4px 8px; font-weight:600;}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .device{background:var(--card); border-radius:var(--radius); padding:14px; cursor:pointer; border:1px solid transparent; transition:all .25s; user-select:none;}
+  .device:hover{border-color:#2e3d5e;}
+  .device.active{background:var(--card2); border-color:var(--accent);}
+  .device .icon{font-size:28px;}
+  .device .name{font-size:14px; margin-top:8px; font-weight:600;}
+  .device .state{font-size:12px; margin-top:3px; color:var(--off);}
+  .device.active .state{color:var(--on);}
+  .device .timer{font-size:11px; color:var(--warn); margin-top:2px; min-height:14px;}
+  .device.moving .state{color:var(--warn);}
+
+  .exit-btn{width:100%; margin-top:12px; background:linear-gradient(135deg,#ff5d73,#ff8a5d); color:#fff; border:none; border-radius:var(--radius); padding:15px; font-size:16px; font-weight:700; cursor:pointer; transition:transform .1s;}
+  .exit-btn:active{transform:scale(.97);}
+
+  .card{background:var(--card); border-radius:var(--radius); padding:14px; margin-bottom:12px;}
+  .row{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #26314b; font-size:14px;}
+  .row:last-child{border-bottom:none;}
+  .row .sub{font-size:12px; color:var(--muted); margin-top:2px;}
+
+  .switch{position:relative; width:44px; height:24px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:var(--off); border-radius:24px; transition:.25s; cursor:pointer;}
+  .slider:before{content:""; position:absolute; height:18px; width:18px; right:3px; top:3px; background:#fff; border-radius:50%; transition:.25s;}
+  input:checked + .slider{background:var(--on);}
+  input:checked + .slider:before{transform:translateX(-20px);}
+
+  input[type=time]{background:var(--card2); color:var(--text); border:1px solid #2e3d5e; border-radius:8px; padding:6px 10px; font-size:15px;}
+
+  .log{max-height:260px; overflow-y:auto;}
+  .log-item{display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #26314b; font-size:13px; align-items:flex-start;}
+  .log-item:last-child{border-bottom:none;}
+  .log-item .t{color:var(--muted); font-size:12px; white-space:nowrap; direction:ltr;}
+  .log-item.alert{color:var(--warn);}
+
+  /* tabs */
+  nav{position:fixed; bottom:0; right:50%; transform:translateX(50%); width:100%; max-width:430px; background:#151c2c; display:flex; border-top:1px solid #26314b; z-index:50;}
+  nav button{flex:1; background:none; border:none; color:var(--muted); padding:12px 4px 14px; font-size:11px; cursor:pointer;}
+  nav button .ic{display:block; font-size:20px; margin-bottom:2px;}
+  nav button.sel{color:var(--accent);}
+  .tab{display:none;}
+  .tab.sel{display:block;}
+
+  /* toast notifications */
+  #toasts{position:fixed; top:12px; right:50%; transform:translateX(50%); width:92%; max-width:400px; z-index:100; display:flex; flex-direction:column; gap:8px;}
+  .toast{background:#2a3552; border-right:4px solid var(--warn); border-radius:12px; padding:12px 14px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.5); animation:slideIn .3s; display:flex; gap:10px; align-items:center;}
+  .toast.danger{border-right-color:var(--danger);}
+  .toast.info{border-right-color:var(--accent);}
+  @keyframes slideIn{from{transform:translateY(-20px); opacity:0;}}
+
+  /* demo menu */
+  .demo-fab{position:fixed; bottom:78px; left:calc(50% - 205px); background:var(--accent); color:#06121f; border:none; border-radius:30px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; z-index:60; box-shadow:0 4px 16px rgba(77,163,255,.4);}
+  @media (max-width:440px){.demo-fab{left:12px;}}
+  .demo-panel{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:90; display:none; align-items:flex-end; justify-content:center;}
+  .demo-panel.open{display:flex;}
+  .demo-sheet{background:#151c2c; width:100%; max-width:430px; border-radius:20px 20px 0 0; padding:18px; max-height:80vh; overflow-y:auto;}
+  .demo-sheet h3{font-size:16px; margin-bottom:4px;}
+  .demo-sheet p{font-size:12px; color:var(--muted); margin-bottom:14px;}
+  .demo-btn{width:100%; text-align:right; background:var(--card2); color:var(--text); border:1px solid #2e3d5e; border-radius:12px; padding:12px 14px; font-size:14px; cursor:pointer; margin-bottom:8px; transition:background .2s;}
+  .demo-btn:hover{background:#2a3855;}
+  .demo-btn small{display:block; color:var(--muted); font-size:11px; margin-top:2px;}
+  .demo-group{font-size:12px; color:var(--accent); margin:12px 0 6px; font-weight:700;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <header>
+    <div>
+      <h1>🏠 הבית שלי</h1>
+      <div class="conn"><span class="dot"></span> מחובר לבקר הבית</div>
+    </div>
+    <div class="clock"><b id="clockTime">--:--</b><span id="clockDate"></span></div>
+  </header>
+
+  <!-- ===== TAB: HOME ===== -->
+  <div class="tab sel" id="tab-home">
+    <div class="section">
+      <h2>מצב הבית — זמן אמת</h2>
+      <div class="grid" id="deviceGrid"></div>
+      <button class="exit-btn" onclick="exitHome()">🚪 יציאה מהבית</button>
+    </div>
+  </div>
+
+  <!-- ===== TAB: SCHEDULE ===== -->
+  <div class="tab" id="tab-schedule">
+    <div class="section">
+      <h2>שליטה מתוזמנת</h2>
+      <div class="card">
+        <div class="row">
+          <div><b>שעת הפעלה</b><div class="sub">התזמון נשמר בבקר הבית, לא בטלפון</div></div>
+          <input type="time" id="schedTime" value="23:00" onchange="saveSchedule()">
+        </div>
+        <div class="row"><span>סגירת תריס</span><label class="switch"><input type="checkbox" id="sch-shutter" checked onchange="saveSchedule()"><span class="slider"></span></label></div>
+        <div class="row"><span>כיבוי אור סלון</span><label class="switch"><input type="checkbox" id="sch-livingLight" checked onchange="saveSchedule()"><span class="slider"></span></label></div>
+        <div class="row"><span>כיבוי אור מסדרון</span><label class="switch"><input type="checkbox" id="sch-hallLight" checked onchange="saveSchedule()"><span class="slider"></span></label></div>
+        <div class="row"><span>נעילת דלת כניסה</span><label class="switch"><input type="checkbox" id="sch-doorLock" checked onchange="saveSchedule()"><span class="slider"></span></label></div>
+        <div class="row"><span>כיבוי שקע חשמלי</span><label class="switch"><input type="checkbox" id="sch-outlet" onchange="saveSchedule()"><span class="slider"></span></label></div>
+      </div>
+      <div class="card" style="font-size:13px; color:var(--muted);">
+        💡 כל רכיב נבחר בנפרד — אפשר לתזמן חלק מהרכיבים ולהשאיר את היתר בשליטה ידנית.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: ALERTS ===== -->
+  <div class="tab" id="tab-alerts">
+    <div class="section">
+      <h2>התראות יזומות</h2>
+      <div class="card">
+        <div class="row">
+          <div>מכשיר חשמלי פועל ברציפות<div class="sub">יותר מ-<input type="number" id="outletMins" value="30" min="1" style="width:52px;background:var(--card2);color:var(--text);border:1px solid #2e3d5e;border-radius:6px;padding:3px 6px;"> דקות</div></div>
+          <label class="switch"><input type="checkbox" id="al-outlet" checked><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div>דלת כניסה לא נעולה<div class="sub">אחרי חצות</div></div>
+          <label class="switch"><input type="checkbox" id="al-door" checked><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div>תריס נשאר פתוח<div class="sub">בשעה שהוגדרה לסגירתו</div></div>
+          <label class="switch"><input type="checkbox" id="al-shutter" checked><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="card" style="font-size:13px; color:var(--muted);">
+        🔔 ההתראות נשלחות מהמערכת גם כשהאפליקציה סגורה — הלוגיקה רצה בבקר הבית.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: LOG ===== -->
+  <div class="tab" id="tab-log">
+    <div class="section">
+      <h2>יומן אירועים אחרונים</h2>
+      <div class="card log" id="eventLog"></div>
+    </div>
+  </div>
+
+  <nav>
+    <button class="sel" onclick="selectTab('home',this)"><span class="ic">🏠</span>בית</button>
+    <button onclick="selectTab('schedule',this)"><span class="ic">⏰</span>תזמון</button>
+    <button onclick="selectTab('alerts',this)"><span class="ic">🔔</span>התראות</button>
+    <button onclick="selectTab('log',this)"><span class="ic">📋</span>יומן</button>
+  </nav>
+
+  <button class="demo-fab" onclick="document.getElementById('demoPanel').classList.add('open')">🧪 תפריט דמו</button>
+
+  <!-- ===== DEMO PANEL ===== -->
+  <div class="demo-panel" id="demoPanel" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="demo-sheet">
+      <h3>🧪 תפריט דמו / סימולציה</h3>
+      <p>מדמה אירועים שמגיעים מבקר הבית — להצגת המערכת בלי חומרה פיזית.</p>
+
+      <div class="demo-group">הפעלת התראות</div>
+      <button class="demo-btn" onclick="demoOutletAlert()">⚡ התראה: מכשיר חשמלי פועל מעל 30 דקות<small>מדמה שהשקע פועל 31 דקות ברציפות</small></button>
+      <button class="demo-btn" onclick="demoDoorAlert()">🔓 התראה: דלת לא נעולה אחרי חצות<small>מדמה שעון 00:05 עם דלת פתוחה</small></button>
+      <button class="demo-btn" onclick="demoShutterAlert()">🪟 התראה: תריס נשאר פתוח בשעת הסגירה<small>מדמה שהתריס לא נסגר בזמן שנקבע</small></button>
+
+      <div class="demo-group">שינוי פיזי בבית (לא מהאפליקציה)</div>
+      <button class="demo-btn" onclick="demoManualSwitch()">🖐️ דייר הדליק אור סלון במתג שבקיר<small>מראה שהאפליקציה מציגה את המצב הפיזי האמיתי</small></button>
+      <button class="demo-btn" onclick="demoManualUnlock()">🔑 דייר פתח את הדלת עם מפתח<small>עדכון מצב שמגיע מהחיישן, לא מפקודה</small></button>
+
+      <div class="demo-group">תרחישים</div>
+      <button class="demo-btn" onclick="demoScheduleNow()">⏰ הרץ עכשיו את התזמון של 23:00<small>מפעיל את כל הפעולות המסומנות בטאב התזמון</small></button>
+      <button class="demo-btn" onclick="exitHome(); document.getElementById('demoPanel').classList.remove('open')">🚪 הפעל תרחיש "יציאה מהבית"</button>
+      <button class="demo-btn" onclick="demoReset()">🔄 איפוס הדמו למצב התחלתי</button>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+</div>
+
+<script>
+// ---------- state (simulates the home controller) ----------
+const DEVICES = {
+  livingLight:{name:'אור סלון', icon:'💡', on:true,  onText:'דלוק', offText:'כבוי'},
+  hallLight:  {name:'אור מסדרון', icon:'🛋️', on:false, onText:'דלוק', offText:'כבוי'},
+  shutter:    {name:'תריס', icon:'🪟', on:true,  onText:'פתוח', offText:'סגור'},
+  doorLock:   {name:'דלת כניסה', icon:'🔒', on:false, onText:'לא נעולה', offText:'נעולה'},
+  outlet:     {name:'שקע חשמלי', icon:'⚡', on:true,  onText:'פועל', offText:'כבוי'},
+};
+let outletStart = Date.now() - 12*60*1000; // running 12 minutes already
+let outletAlerted = false;
+
+// ---------- render ----------
+function renderDevices(){
+  const grid = document.getElementById('deviceGrid');
+  grid.innerHTML = '';
+  for(const [id,d] of Object.entries(DEVICES)){
+    const el = document.createElement('div');
+    el.className = 'device' + (d.on ? ' active' : '');
+    el.onclick = () => toggleDevice(id, true);
+    let timer = '';
+    if(id==='outlet' && d.on){
+      const mins = Math.floor((Date.now()-outletStart)/60000);
+      timer = `פועל ${mins} דק'`;
+    }
+    el.innerHTML = `<div class="icon">${d.icon}</div><div class="name">${d.name}</div>
+                    <div class="state">${d.on ? d.onText : d.offText}</div><div class="timer">${timer}</div>`;
+    grid.appendChild(el);
+  }
+}
+
+// ---------- control ----------
+function toggleDevice(id, fromApp, silent){
+  const d = DEVICES[id];
+  d.on = !d.on;
+  if(id==='outlet'){ if(d.on){outletStart=Date.now(); outletAlerted=false;} }
+  renderDevices();
+  if(!silent){
+    const src = fromApp ? 'מהאפליקציה' : 'ידנית (חיישן)';
+    logEvent(`${d.name}: ${d.on ? d.onText : d.offText} — ${src}`);
+  }
+}
+
+function exitHome(){
+  let acts=[];
+  if(DEVICES.shutter.on){DEVICES.shutter.on=false; acts.push('התריס נסגר');}
+  if(DEVICES.livingLight.on){DEVICES.livingLight.on=false; acts.push('אור הסלון כבה');}
+  if(DEVICES.hallLight.on){DEVICES.hallLight.on=false; acts.push('אור המסדרון כבה');}
+  if(DEVICES.outlet.on){DEVICES.outlet.on=false; acts.push('השקע כובה');}
+  if(DEVICES.doorLock.on){DEVICES.doorLock.on=false; acts.push('הדלת ננעלה');}
+  renderDevices();
+  logEvent('🚪 הופעל תרחיש "יציאה מהבית": ' + (acts.length? acts.join(', ') : 'הכול כבר היה במצב סגור'));
+  toast('🚪 תרחיש "יציאה מהבית" בוצע — הבית מאובטח', 'info');
+}
+
+// ---------- schedule ----------
+function saveSchedule(){
+  logEvent('⏰ הגדרות התזמון עודכנו ונשמרו בבקר הבית (' + document.getElementById('schedTime').value + ')');
+}
+function runSchedule(){
+  const acts=[];
+  if(document.getElementById('sch-shutter').checked && DEVICES.shutter.on){DEVICES.shutter.on=false; acts.push('התריס נסגר');}
+  if(document.getElementById('sch-livingLight').checked && DEVICES.livingLight.on){DEVICES.livingLight.on=false; acts.push('אור הסלון כבה');}
+  if(document.getElementById('sch-hallLight').checked && DEVICES.hallLight.on){DEVICES.hallLight.on=false; acts.push('אור המסדרון כבה');}
+  if(document.getElementById('sch-doorLock').checked && DEVICES.doorLock.on){DEVICES.doorLock.on=false; acts.push('הדלת ננעלה');}
+  if(document.getElementById('sch-outlet').checked && DEVICES.outlet.on){DEVICES.outlet.on=false; acts.push('השקע כובה');}
+  renderDevices();
+  const t = document.getElementById('schedTime').value;
+  logEvent(`⏰ תזמון ${t} בוצע על-ידי הבקר: ` + (acts.length? acts.join(', ') : 'אין רכיבים לשינוי'));
+  toast(`⏰ התזמון של ${t} בוצע`, 'info');
+}
+
+// ---------- log & toasts ----------
+function logEvent(text, isAlert){
+  const log = document.getElementById('eventLog');
+  const item = document.createElement('div');
+  item.className = 'log-item' + (isAlert ? ' alert' : '');
+  const now = new Date();
+  item.innerHTML = `<span class="t">${now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span><span>${text}</span>`;
+  log.prepend(item);
+}
+function toast(text, type){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type||'');
+  t.innerHTML = text;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0'; t.style.transition='opacity .4s'; setTimeout(()=>t.remove(),400);}, 5000);
+}
+function notifyAlert(text){
+  toast('🔔 ' + text, 'danger');
+  logEvent('🔔 התראה: ' + text, true);
+}
+
+// ---------- automatic outlet alert (real logic in the demo) ----------
+setInterval(()=>{
+  renderDevices();
+  if(DEVICES.outlet.on && document.getElementById('al-outlet').checked && !outletAlerted){
+    const limit = parseInt(document.getElementById('outletMins').value)||30;
+    if((Date.now()-outletStart)/60000 >= limit){
+      outletAlerted = true;
+      notifyAlert(`המכשיר החשמלי פועל ברציפות יותר מ-${limit} דקות`);
+    }
+  }
+}, 5000);
+
+// ---------- demo actions ----------
+function closeDemo(){document.getElementById('demoPanel').classList.remove('open');}
+function demoOutletAlert(){
+  DEVICES.outlet.on = true;
+  const limit = parseInt(document.getElementById('outletMins').value)||30;
+  outletStart = Date.now() - (limit+1)*60*1000;
+  outletAlerted = true;
+  renderDevices();
+  notifyAlert(`המכשיר החשמלי פועל ברציפות יותר מ-${limit} דקות`);
+  closeDemo();
+}
+function demoDoorAlert(){
+  DEVICES.doorLock.on = true; renderDevices();
+  notifyAlert('דלת הכניסה אינה נעולה אחרי חצות (00:05)');
+  closeDemo();
+}
+function demoShutterAlert(){
+  DEVICES.shutter.on = true; renderDevices();
+  notifyAlert('התריס נשאר פתוח בשעה שהוגדרה לסגירתו (' + document.getElementById('schedTime').value + ')');
+  closeDemo();
+}
+function demoManualSwitch(){
+  DEVICES.livingLight.on = true;
+  renderDevices();
+  logEvent('🖐️ אור הסלון הודלק ידנית במתג שבקיר — המצב התעדכן מהחיישן');
+  toast('🖐️ עדכון מהבית: אור הסלון הודלק במתג הקיר', 'info');
+  closeDemo();
+}
+function demoManualUnlock(){
+  DEVICES.doorLock.on = true;
+  renderDevices();
+  logEvent('🔑 דלת הכניסה נפתחה עם מפתח — המצב התעדכן מהחיישן');
+  toast('🔑 עדכון מהבית: דלת הכניסה נפתחה עם מפתח', 'info');
+  closeDemo();
+}
+function demoScheduleNow(){ runSchedule(); closeDemo(); }
+function demoReset(){
+  DEVICES.livingLight.on=true; DEVICES.hallLight.on=false; DEVICES.shutter.on=true;
+  DEVICES.doorLock.on=false; DEVICES.outlet.on=true;
+  outletStart = Date.now()-12*60*1000; outletAlerted=false;
+  renderDevices();
+  document.getElementById('eventLog').innerHTML='';
+  seedLog();
+  logEvent('🔄 הדמו אופס למצב התחלתי');
+  closeDemo();
+}
+
+// ---------- tabs & clock ----------
+function selectTab(name, btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('sel'));
+  document.getElementById('tab-'+name).classList.add('sel');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('he-IL',{weekday:'long', day:'numeric', month:'numeric'});
+}
+setInterval(tickClock,1000); tickClock();
+
+// ---------- seed ----------
+function seedLog(){
+  logEvent('המערכת מחוברת — מצב הבית מסונכרן מבקר הבית');
+}
+seedLog();
+renderDevices();
+</script>
+</body>
+</html>
